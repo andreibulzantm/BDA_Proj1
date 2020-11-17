@@ -1,6 +1,6 @@
 # BDA_Proj1
 
-Codul nostru e în unified.py. Am pus și două versiuni găsite pe internet pentru cmeans/kmeans separat, nu știu dacă vă ajută la ceva sau nu.
+Codul e în unified.py.
 Am pus în comentarii în cod ca să se vadă unde se găsesc fiecare din pașii ăștia din explicație:
 
 The steps of UF algorithm are UF1 to UF6:
@@ -19,4 +19,4 @@ Otherwise, a new iteration will be performed, i.e.,  is replaced with +1 a
 The above UF algorithm implementation results directly in FCM algorithm implementation or KM algorithm implementation by only particularizing (22).
 
 Pașii ăștia sunt în fișierul cu Partitional implementation.
-O să șterg fișierele de input + kmeans, cmeans după ce vă uitați și vedeți ce vă ajută și că merge.
+O să șterg fișierele de input după ce vă uitați și vedeți că merge.
