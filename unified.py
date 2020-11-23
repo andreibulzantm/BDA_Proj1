@@ -3,26 +3,26 @@ import time
 import numpy as np
 import math
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 epsilon = 0.00001
 
+
 def read_data(file_path):
+    features = []
+    plant_types = []
+
     with open(file_path, 'r') as f:
-        data = f.readlines()
-    for idx in range(len(data)):
-        data[idx] = data[idx].split(',')
-        data[idx][-1] = data[idx][-1].replace('\n', '')
+        line = f.readline()
+        while line:
+            line_data = line.strip('\n ').split(',')
+            features.append([float(feature) for feature in line_data[:-1]])
+            plant_types.append(line_data[-1])
+            line = f.readline()
 
-    for i in range(len(data)):
-        for j in range(len(data[i]) -1):
-            data[i][j] = float(data[i][j])
-        #print(data[i])
-
-    return data
+    return np.asarray(features), plant_types
 
 
-def initialize_centroids(np_data, clusters=3): #Step UF2
+def initialize_centroids(np_data, clusters=3):  # Step UF2
     list_data = list(np_data)
     return np.asarray(random.choices(list_data, k=clusters))
 
@@ -34,7 +34,7 @@ def euclid_dist(point, cluster):
     return math.sqrt(dist)
 
 
-def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzzification=1): #Steps UF3 & UF4
+def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzzification=1):  # Steps UF3 & UF4
     init_matrix = np.zeros((len(np_data), clusters))
 
     if alg == 0:
@@ -78,7 +78,7 @@ def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzz
     return init_matrix
 
 
-def compute_new_centroids(np_data, membership_matrix, clusters=3, fuzzification=1): #Step UF5
+def compute_new_centroids(np_data, membership_matrix, clusters=3, fuzzification=1):  # Step UF5
     new_centroids = np.zeros((clusters, 4))
     for i in range(0, clusters):
         lsum = 0
@@ -98,7 +98,7 @@ def unified(k, np_data, alg, max_iter, fuzzification=1):
 
         new_centroids = compute_new_centroids(np_data, membership_mat, k, fuzzification=fuzzification)
         init_centroids = new_centroids
-    #init_centroids o să aibă valoarea finală după for, practic e step UF6 (doar că ar mai trebui pus și al doilea stopping criterion cu un epsilon de diferență centroizi la iterații diferite)
+    # init_centroids o să aibă valoarea finală după for, practic e step UF6 (doar că ar mai trebui pus și al doilea stopping criterion cu un epsilon de diferență centroizi la iterații diferite)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -116,17 +116,10 @@ def unified(k, np_data, alg, max_iter, fuzzification=1):
 
 
 start = time.time()
-data = read_data('D:\BDA\KaggleBDA\input\Iris-150.txt')
-plant_types = []
-for elem in data:
-    plant_types.append(elem[-1])
-    del elem[-1]
+data, plant_types = read_data('./input/Iris-150.txt')
 
+unified(3, data, 0, 100)  # max_iter = <some_val> și k (clusters) = some_num sunt step UF1
 
-np_data = np.asarray(data)
-unified(3, np_data, 0, 100) #max_iter = <some_val> și k (clusters) = some_num sunt step UF1
-
-
-#print(init_centroids)
+# print(init_centroids)
 end = time.time()
-#print(end-start)
+# print(end-start)
