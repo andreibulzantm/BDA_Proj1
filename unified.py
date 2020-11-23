@@ -1,25 +1,10 @@
 import random
-import time
 import numpy as np
 import math
-from matplotlib import pyplot as plt
 
-epsilon = 0.00001
+from tqdm.contrib.concurrent import process_map
 
-
-def read_data(file_path):
-    features = []
-    plant_types = []
-
-    with open(file_path, 'r') as f:
-        line = f.readline()
-        while line:
-            line_data = line.strip('\n ').split(',')
-            features.append([float(feature) for feature in line_data[:-1]])
-            plant_types.append(line_data[-1])
-            line = f.readline()
-
-    return np.asarray(features), plant_types
+from utils import split_in_partitions
 
 
 def initialize_centroids(np_data, clusters=3):  # Step UF2
@@ -34,7 +19,8 @@ def euclid_dist(point, cluster):
     return math.sqrt(dist)
 
 
-def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzzification=1):  # Steps UF3 & UF4
+def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzzification=1,
+                             epsilon=0.00001):  # Steps UF3 & UF4
     init_matrix = np.zeros((len(np_data), clusters))
 
     if alg == 0:
@@ -90,36 +76,59 @@ def compute_new_centroids(np_data, membership_matrix, clusters=3, fuzzification=
     return new_centroids
 
 
-def unified(k, np_data, alg, max_iter, fuzzification=1):
-    init_centroids = initialize_centroids(np_data, k)
-    for iter in range(max_iter):
-        membership_mat = calculate_membership_mat(np_data, init_centroids, clusters=k, alg=alg,
-                                                  fuzzification=fuzzification)
+def step(data: np.array, centroids: np.array, k, alg, fuzzification):
+    membership_mat = calculate_membership_mat(
+        data, centroids, clusters=k, alg=alg,
+        fuzzification=fuzzification
+    )
 
-        new_centroids = compute_new_centroids(np_data, membership_mat, k, fuzzification=fuzzification)
-        init_centroids = new_centroids
-    # init_centroids o să aibă valoarea finală după for, practic e step UF6 (doar că ar mai trebui pus și al doilea stopping criterion cu un epsilon de diferență centroizi la iterații diferite)
+    centroids = compute_new_centroids(data, membership_mat, k, fuzzification=fuzzification)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    img = ax.scatter(np_data[:, 0], np_data[:, 1], np_data[:, 2], s=5, cmap=plt.hot())
-    img = ax.scatter(init_centroids[:, 0], init_centroids[:, 1], init_centroids[:, 2], marker='*', c='r', s=250)
-    plt.show()
-
-    plt.scatter(np_data[:, 0], np_data[:, 1], s=7)
-    plt.scatter(init_centroids[:, 0], init_centroids[:, 1], marker='*', c='g', s=150)
-    plt.show()
-
-    plt.scatter(np_data[:, 2], np_data[:, 3], s=7)
-    plt.scatter(init_centroids[:, 2], init_centroids[:, 3], marker='*', c='g', s=150)
-    plt.show()
+    return centroids
 
 
-start = time.time()
-data, plant_types = read_data('./input/Iris-150.txt')
+def fit(k, data: np.array, alg, max_iter, fuzzification=1):
+    centroids = initialize_centroids(data, k)
+    for _ in range(max_iter):
+        centroids = step(data, centroids, k, alg, fuzzification)
 
-unified(3, data, 0, 100)  # max_iter = <some_val> și k (clusters) = some_num sunt step UF1
+    return centroids
+    # centroids o să aibă valoarea finală după for, practic e step UF6 (doar că ar mai trebui pus și al doilea stopping criterion cu un epsilon de diferență centroizi la iterații diferite)
 
-# print(init_centroids)
-end = time.time()
-# print(end-start)
+
+def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification=1):
+    data_partitions = split_in_partitions(data, partitions)
+    centroids = initialize_centroids(data, k)
+
+    for _ in range(max_iter):
+        process_arguments = list(zip(
+            data_partitions,
+            [centroids] * partitions,
+            [k] * partitions,
+            [alg] * partitions,
+            [fuzzification] * partitions
+        ))
+
+        partial_centroids = process_map(
+            _step_wrapper,
+            process_arguments,
+            max_workers=partitions
+        )
+        centroids = compute_global_centroids(k, partial_centroids)
+
+    return centroids
+
+
+def compute_global_centroids(k, partial_centroids):
+    # TODO: Implement this
+    return np.concatenate(partial_centroids).reshape(k, -1)
+
+
+def _step_wrapper(params):
+    return step(
+        data=params[0],
+        centroids=params[1],
+        k=params[2],
+        alg=params[3],
+        fuzzification=params[4]
+    )
