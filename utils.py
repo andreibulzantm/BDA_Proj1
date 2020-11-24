@@ -55,7 +55,7 @@ def plot_centroids(data: np.array, centroids: np.array):
 
 def plot_time_results(alg_references: list, reference_label: str, times: list):
     plt.plot(alg_references, times, 'ro')
-    plt.xlabel('seconds')
+    plt.xlabel('Seconds')
     plt.ylabel(reference_label)
     plt.axis([0, alg_references[-1]*1.2, 0, times[-1]*1.2])
     plt.show()
