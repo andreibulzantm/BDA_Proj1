@@ -1,4 +1,6 @@
 import random
+from multiprocessing import Pool
+
 import numpy as np
 import math
 
@@ -109,12 +111,12 @@ def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification
             [fuzzification] * partitions
         ))
 
-        partial_centroids = process_map(
-            _step_wrapper,
-            process_arguments,
-            max_workers=partitions
-        )
-        centroids = compute_global_centroids(k, partial_centroids)
+        with Pool(partitions) as pool:
+            partial_centroids = pool.map(
+                _step_wrapper,
+                process_arguments
+            )
+            centroids = compute_global_centroids(k, partial_centroids)
 
     return centroids
 
