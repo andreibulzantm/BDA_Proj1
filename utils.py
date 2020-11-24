@@ -1,4 +1,5 @@
 import math
+import time
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -36,7 +37,7 @@ def split_in_partitions(data: np.array, num_partitions: int) -> np.array:
     return partitions
 
 
-def plot_data(data: np.array, centroids: np.array):
+def plot_centroids(data: np.array, centroids: np.array):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(data[:, 0], data[:, 1], data[:, 2], s=5, cmap=plt.hot())
@@ -50,3 +51,19 @@ def plot_data(data: np.array, centroids: np.array):
     plt.scatter(data[:, 2], data[:, 3], s=7)
     plt.scatter(centroids[:, 2], centroids[:, 3], marker='*', c='g', s=150)
     plt.show()
+
+
+def plot_time_results(alg_references: list, reference_label: str, times: list):
+    plt.plot(alg_references, times, 'ro')
+    plt.xlabel('seconds')
+    plt.ylabel(reference_label)
+    plt.axis([0, alg_references[-1]*1.2, 0, times[-1]*1.2])
+    plt.show()
+
+
+def timeit(func, *args):
+    start = time.time()
+    func(*args)
+    end = time.time()
+
+    return end - start

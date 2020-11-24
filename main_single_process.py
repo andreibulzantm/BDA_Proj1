@@ -2,7 +2,7 @@ import argparse
 import time
 
 from unified import fit
-from utils import read_data, plot_data
+from utils import read_data, plot_centroids
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_centroids', type=int, default=3)
@@ -32,6 +32,6 @@ if __name__ == '__main__':
     end = time.time()
     print(f'Algorithm took: {end - start} seconds')
 
-    plot_data(data, centroids)
+    plot_centroids(data, centroids)
 
 
