@@ -4,8 +4,6 @@ from multiprocessing import Pool
 import numpy as np
 import math
 
-from tqdm.contrib.concurrent import process_map
-
 from utils import split_in_partitions
 
 

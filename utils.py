@@ -55,13 +55,16 @@ def plot_centroids(data: np.array, centroids: np.array):
 
 def plot_time_results(alg_references: list, reference_label: str, times: list):
     plt.plot(alg_references, times, 'ro')
-    plt.xlabel('Seconds')
-    plt.ylabel(reference_label)
+    plt.xlabel(reference_label)
+    plt.ylabel('Seconds')
     plt.axis([0, alg_references[-1]*1.2, 0, times[-1]*1.2])
     plt.show()
 
 
 def timeit(func, *args):
+    """
+        Returns the runtime of the `func` in seconds
+    """
     start = time.time()
     func(*args)
     end = time.time()
