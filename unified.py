@@ -122,7 +122,7 @@ def step_multi_process(data: np.array, centroids: np.array, k, alg, fuzzificatio
     return centroids, mem_degree
 
 
-def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification=1):
+def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification=1, stop_eps=0.00001):
     data_partitions = split_in_partitions(data, partitions)
     centroids = initialize_centroids(data, k)
 
@@ -140,8 +140,10 @@ def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification
                 _step_wrapper,
                 process_arguments
             )
-            centroids = compute_global_centroids(k, partitions_result)
-
+            new_centroids = compute_global_centroids(k, partitions_result)
+            if np.sum(np.abs(new_centroids - centroids)) / (new_centroids.shape[0] * new_centroids.shape[1]) < stop_eps:
+                break
+            centroids = new_centroids
     return centroids
 
 

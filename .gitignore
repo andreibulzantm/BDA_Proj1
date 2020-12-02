@@ -1,3 +1,5 @@
 .idea/
 __pycache__
 /venv/
+/input/Iris-15000000.txt
+/input/Iris-1500000.txt
