@@ -1,8 +1,9 @@
+import math
 import random
 from multiprocessing import Pool
 
 import numpy as np
-import math
+from tqdm import tqdm
 
 from utils import split_in_partitions
 
@@ -96,11 +97,36 @@ def fit(k, data: np.array, alg, max_iter, fuzzification=1):
     # centroids o să aibă valoarea finală după for, practic e step UF6 (doar că ar mai trebui pus și al doilea stopping criterion cu un epsilon de diferență centroizi la iterații diferite)
 
 
+def compute_new_centroids_multi_process(np_data, membership_matrix, clusters=3, fuzzification=1):  # Step UF5
+    new_centroids = np.zeros((clusters, 4))
+    new_mem_degree = np.zeros(clusters)
+
+    for i in range(0, clusters):
+        left_sum = np.zeros(4)
+        right_sum = 0
+        for j in range(len(np_data)):
+            left_sum += np.multiply(math.pow(membership_matrix[j][i], fuzzification), np_data[j])
+            right_sum += math.pow(membership_matrix[j][i], fuzzification)
+        new_centroids[i] = left_sum
+        new_mem_degree[i] = right_sum
+    return new_centroids, new_mem_degree
+
+
+def step_multi_process(data: np.array, centroids: np.array, k, alg, fuzzification):
+    membership_mat = calculate_membership_mat(
+        data, centroids, clusters=k, alg=alg,
+        fuzzification=fuzzification
+    )
+
+    centroids, mem_degree = compute_new_centroids_multi_process(data, membership_mat, k, fuzzification=fuzzification)
+    return centroids, mem_degree
+
+
 def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification=1):
     data_partitions = split_in_partitions(data, partitions)
     centroids = initialize_centroids(data, k)
 
-    for _ in range(max_iter):
+    for i in tqdm(range(max_iter), desc="Iterations"):
         process_arguments = list(zip(
             data_partitions,
             [centroids] * partitions,
@@ -110,22 +136,33 @@ def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification
         ))
 
         with Pool(partitions) as pool:
-            partial_centroids = pool.map(
+            partitions_result = pool.map(
                 _step_wrapper,
                 process_arguments
             )
-            centroids = compute_global_centroids(k, partial_centroids)
+            centroids = compute_global_centroids(k, partitions_result)
 
     return centroids
 
 
-def compute_global_centroids(k, partial_centroids):
-    # TODO: Implement this
-    return np.concatenate(partial_centroids).reshape(k, -1)
+def compute_global_centroids(clusters, partitions_result):
+    new_centroids = np.zeros((clusters, 4))
+    for i in range(0, clusters):
+        centroid = np.zeros(4)
+        mem_degree = 0
+        for alfa in range(0, len(partitions_result)):
+            centroid += partitions_result[alfa][0][i]
+            mem_degree += partitions_result[alfa][1][i]
+
+        if mem_degree > 0.0:
+            new_centroids[i] = np.divide(centroid, mem_degree)
+        else:
+            new_centroids[i] = centroid
+    return new_centroids
 
 
 def _step_wrapper(params):
-    return step(
+    return step_multi_process(
         data=params[0],
         centroids=params[1],
         k=params[2],
