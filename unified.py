@@ -20,52 +20,68 @@ def euclid_dist(point, cluster):
     return math.sqrt(dist)
 
 
-def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzzification=1,
+def calculate_membership_mat(np_data, initial_centroids, clusters=3, alg=0, fuzzification=1.1,
                              epsilon=0.00001):  # Steps UF3 & UF4
     init_matrix = np.zeros((len(np_data), clusters))
 
     if alg == 0:
-        for i in range(0, len(np_data)):
-            min_idx = 0
-            min = 999
-            for j in range(0, clusters):
-                for k in range(0, clusters):
-                    if j != k:
-                        d1 = euclid_dist(np_data[i], initial_centroids[j])
-                        d2 = euclid_dist(np_data[i], initial_centroids[k])
-                        if d1 <= d2 and d1 < min:
-                            min = d1
-                            min_idx = j
-                        else:
-                            if d2 < min:
-                                min = d2
-                                min_idx = k
+        mtrx1 = np_data - initial_centroids[0]
+        mtrx1 = np.power(mtrx1, 2)
+        mtrx1_dists = np.sum(mtrx1, axis=1)
+        mtrx1_dists = np.sqrt(mtrx1_dists)
 
-            init_matrix[i][min_idx] = 1
+        mtrx2 = np_data - initial_centroids[1]
+        mtrx2 = np.power(mtrx2, 2)
+        mtrx2_dists = np.sum(mtrx2, axis=1)
+        mtrx2_dists = np.sqrt(mtrx2_dists)
+
+        mtrx3 = np_data - initial_centroids[2]
+        mtrx3 = np.power(mtrx3, 2)
+        mtrx3_dists = np.sum(mtrx3, axis=1)
+        mtrx3_dists = np.sqrt(mtrx3_dists)
+
+        final_mtrx_dists = np.stack((mtrx1_dists, mtrx2_dists, mtrx3_dists), axis=1)
+        b = np.zeros_like(final_mtrx_dists)
+        b[np.arange(len(final_mtrx_dists)), final_mtrx_dists.argmin(1)] = 1
+        #print(final_mtrx_dists)
+        return b
 
     else:
-        for i in range(0, len(np_data)):
-            for j in range(0, clusters):
-                leftSum = euclid_dist(np_data[i], initial_centroids[j])
-                if leftSum == 0:
-                    leftSum = epsilon
-                leftSum = 1 / leftSum
-                power = 2 / (fuzzification - 1)
-                leftSum = math.pow(leftSum, power)
-                rightSum = 0
-                for k in range(0, clusters):
-                    value = euclid_dist(np_data[i], initial_centroids[k])
-                    if value == 0:
-                        value = epsilon
-                    value = 1 / value
-                    value = math.pow(value, power)
-                    rightSum += value
-                init_matrix[i][j] = leftSum / rightSum
+        mtrx1 = np_data - initial_centroids[0]
+        mtrx1 = np.power(mtrx1, 2)
+        mtrx1_dists = np.sum(mtrx1, axis=1)
+        mtrx1_dists = np.sqrt(mtrx1_dists)
+        mtrx1_dists = np.where(mtrx1_dists == 0, epsilon, mtrx1_dists)
+        mtrx1_inversed = np.divide(1, mtrx1_dists)
+        mtrx1_inversed = np.power(mtrx1_inversed, (2 / (fuzzification - 1)))
+
+        mtrx2 = np_data - initial_centroids[1]
+        mtrx2 = np.power(mtrx2, 2)
+        mtrx2_dists = np.sum(mtrx2, axis=1)
+        mtrx2_dists = np.sqrt(mtrx2_dists)
+        mtrx2_dists = np.where(mtrx2_dists == 0, epsilon, mtrx2_dists)
+        mtrx2_inversed = np.divide(1, mtrx2_dists)
+        mtrx2_inversed = np.power(mtrx2_inversed, (2 / (fuzzification - 1)))
+
+        mtrx3 = np_data - initial_centroids[2]
+        mtrx3 = np.power(mtrx3, 2)
+        mtrx3_dists = np.sum(mtrx3, axis=1)
+        mtrx3_dists = np.sqrt(mtrx3_dists)
+        mtrx3_dists = np.where(mtrx3_dists == 0, epsilon, mtrx3_dists)
+        mtrx3_inversed = np.divide(1, mtrx3_dists)
+        mtrx3_inversed = np.power(mtrx3_inversed, (2 / fuzzification - 1))
+
+        sum_mtrx_inversed = mtrx1_inversed + mtrx2_inversed + mtrx3_inversed
+
+        left = np.stack((mtrx1_inversed, mtrx2_inversed, mtrx3_inversed), axis=1)
+        right = sum_mtrx_inversed
+        final = np.divide(left, right[:, None])
+        return final
 
     return init_matrix
 
 
-def compute_new_centroids(np_data, membership_matrix, clusters=3, fuzzification=1):  # Step UF5
+def compute_new_centroids(np_data, membership_matrix, clusters=3, fuzzification=1.1):  # Step UF5
     new_centroids = np.zeros((clusters, 4))
     for i in range(0, clusters):
         lsum = 0
@@ -77,7 +93,7 @@ def compute_new_centroids(np_data, membership_matrix, clusters=3, fuzzification=
     return new_centroids
 
 
-def step(data: np.array, centroids: np.array, k, alg, fuzzification):
+def step(data: np.array, centroids: np.array, k, alg, fuzzification=1.1):
     membership_mat = calculate_membership_mat(
         data, centroids, clusters=k, alg=alg,
         fuzzification=fuzzification
@@ -88,16 +104,22 @@ def step(data: np.array, centroids: np.array, k, alg, fuzzification):
     return centroids
 
 
-def fit(k, data: np.array, alg, max_iter, fuzzification=1):
+def fit(k, data: np.array, alg, max_iter, fuzzification=1.1, epsilon_stop=0.0001):
     centroids = initialize_centroids(data, k)
     for _ in range(max_iter):
+        prev_centroids = centroids
         centroids = step(data, centroids, k, alg, fuzzification)
+        if np.sum(np.abs(centroids - prev_centroids)) / (centroids.shape[0] * prev_centroids.shape[1]) < epsilon_stop:
+            break
+
+
+
 
     return centroids
     # centroids o să aibă valoarea finală după for, practic e step UF6 (doar că ar mai trebui pus și al doilea stopping criterion cu un epsilon de diferență centroizi la iterații diferite)
 
 
-def compute_new_centroids_multi_process(np_data, membership_matrix, clusters=3, fuzzification=1):  # Step UF5
+def compute_new_centroids_multi_process(np_data, membership_matrix, clusters=3, fuzzification=1.1):  # Step UF5
     new_centroids = np.zeros((clusters, 4))
     new_mem_degree = np.zeros(clusters)
 
@@ -112,7 +134,7 @@ def compute_new_centroids_multi_process(np_data, membership_matrix, clusters=3, 
     return new_centroids, new_mem_degree
 
 
-def step_multi_process(data: np.array, centroids: np.array, k, alg, fuzzification):
+def step_multi_process(data: np.array, centroids: np.array, k, alg, fuzzification=1.1):
     membership_mat = calculate_membership_mat(
         data, centroids, clusters=k, alg=alg,
         fuzzification=fuzzification
@@ -122,7 +144,7 @@ def step_multi_process(data: np.array, centroids: np.array, k, alg, fuzzificatio
     return centroids, mem_degree
 
 
-def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification=1):
+def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification=1.1, epsilon_stop=0.0001):
     data_partitions = split_in_partitions(data, partitions)
     centroids = initialize_centroids(data, k)
 
@@ -140,8 +162,11 @@ def fit_multiprocess(k, partitions, data: np.array, alg, max_iter, fuzzification
                 _step_wrapper,
                 process_arguments
             )
+            prev_centroids = centroids
             centroids = compute_global_centroids(k, partitions_result)
-
+            if np.sum(np.abs(centroids - prev_centroids)) / (
+                    centroids.shape[0] * prev_centroids.shape[1]) < epsilon_stop:
+                break
     return centroids
 
 

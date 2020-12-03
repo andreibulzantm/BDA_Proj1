@@ -53,6 +53,16 @@ def plot_centroids(data: np.array, centroids: np.array):
     plt.show()
 
 
+def plot_centroids_multi(data: np.array, centroids: np.array):
+    plt.scatter(data[:, 0], data[:, 1], s=7)
+    plt.scatter(centroids[:, 0], centroids[:, 1], marker='*', c='g', s=150)
+    plt.show()
+
+    plt.scatter(data[:, 2], data[:, 3], s=7)
+    plt.scatter(centroids[:, 2], centroids[:, 3], marker='*', c='g', s=150)
+    plt.show()
+
+
 def plot_time_results(alg_references: list, reference_label: str, times: list):
     plt.plot(alg_references, times, 'ro')
     plt.xlabel(reference_label)
